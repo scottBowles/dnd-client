@@ -1,2 +1,7 @@
-<script>import "../app.postcss";</script>
-<slot></slot>
+<script>
+	import '../app.postcss';
+	import Header from '$lib/Header.svelte';
+</script>
+
+<Header />
+<slot />
