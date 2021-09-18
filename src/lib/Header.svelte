@@ -1,14 +1,70 @@
-<script>
-	import { page } from '$app/stores';
-
-	$: currentPage = '/' + $page.path.split('/')[1];
-
-	const navLinks = [
+<script context="module">
+	const mainNavLinks = [
 		{ label: 'Dashboard', href: '/' },
 		{ label: 'NPCs', href: '/npcs' },
 		{ label: 'Places', href: '/places' },
 		{ label: 'General Knowledge', href: '/generalknowledge' }
 	];
+
+	const profileNavLinks = [
+		{ label: 'Profile', href: '/profile' },
+		{ label: 'Settings', href: '/settings' },
+		{ label: 'Logout', href: '/' }
+	];
+</script>
+
+<script>
+	import { onMount } from 'svelte';
+	import { scale } from 'svelte/transition';
+	import { page } from '$app/stores';
+
+	$: currentPage = '/' + $page.path.split('/')[1];
+
+	let profileMenu;
+	let profileMenuButton;
+	let profileNavIsOpen = false;
+	let mobileNavIsOpen = false;
+
+	const toggleMobileNav = () => {
+		mobileNavIsOpen = !mobileNavIsOpen;
+		if (mobileNavIsOpen) {
+			profileNavIsOpen = false;
+		}
+	};
+
+	const toggleProfileNav = () => {
+		profileNavIsOpen = !profileNavIsOpen;
+		if (profileNavIsOpen) {
+			mobileNavIsOpen = false;
+		}
+	};
+
+	onMount(() => {
+		const handleOutsideClick = (event) => {
+			if (
+				profileNavIsOpen &&
+				!profileMenu.contains(event.target) &&
+				!profileMenuButton.contains(event.target)
+			) {
+				profileNavIsOpen = false;
+			}
+		};
+
+		const handleEscape = (event) => {
+			if (event.key === 'Escape') {
+				profileNavIsOpen = false;
+				mobileNavIsOpen = false;
+			}
+		};
+
+		document.addEventListener('click', handleOutsideClick, false);
+		document.addEventListener('keyup', handleEscape, false);
+
+		return () => {
+			document.removeEventListener('click', handleOutsideClick, false);
+			document.removeEventListener('keyup', handleEscape, false);
+		};
+	});
 </script>
 
 <!--            The Header is arranged as follows           -->
@@ -17,7 +73,7 @@
 
 <!--   This is accomplished with four sections:             -->
 <!--     1. DESKTOP ONLY (icon, links)                      -->
-<!--     2. profile + profile dropdown                      -->
+<!--     2. ALL profile + profile dropdown                  -->
 <!--     3. MOBILE ONLY icon                                -->
 <!--     4. MOBILE ONLY hamburger                           -->
 
@@ -45,16 +101,18 @@
 				<div class="hidden sm:block sm:ml-6">
 					<div class="flex space-x-4">
 						<!-- Current: "bg-gray-900 text-white", Default: "text-gray-300 hover:bg-gray-700 hover:text-white" -->
-						{#each navLinks as { label, href }}
+						{#each mainNavLinks as { label, href }}
 							{#if currentPage === href}
 								<a
 									{href}
+									sveltekit:prefetch
 									class="bg-gray-900 text-white px-3 py-2 rounded-md text-sm font-medium"
 									aria-current="page">{label}</a
 								>
 							{:else}
 								<a
 									{href}
+									sveltekit:prefetch
 									class="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
 									>{label}</a
 								>
@@ -64,16 +122,18 @@
 				</div>
 			</div>
 			<!-- 2. profile + profile dropdown -->
-			<div class="flex items-center pr-2">
+			<div class="flex flex-col content-center pr-2">
 				<!-- Profile dropdown -->
-				<div class="ml-3 relative">
+				<div class="ml-3">
 					<div>
 						<button
 							type="button"
 							class="bg-gray-800 flex text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white"
 							id="user-menu-button"
-							aria-expanded="false"
 							aria-haspopup="true"
+							aria-expanded={profileNavIsOpen}
+							on:click={toggleProfileNav}
+							bind:this={profileMenuButton}
 						>
 							<span class="sr-only">Open user menu</span>
 							<img
@@ -83,46 +143,28 @@
 							/>
 						</button>
 					</div>
-
-					<!--
-            Dropdown menu, show/hide based on menu state.
-
-            Entering: "transition ease-out duration-100"
-              From: "transform opacity-0 scale-95"
-              To: "transform opacity-100 scale-100"
-            Leaving: "transition ease-in duration-75"
-              From: "transform opacity-100 scale-100"
-              To: "transform opacity-0 scale-95"
-          -->
+				</div>
+				<!-- Profile Menu -->
+				<div class="relative">
 					<div
-						class="absolute origin-top-left sm:origin-top-right left-0 sm:left-auto sm:right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 focus:outline-none"
+						class="absolute dropdown {profileNavIsOpen &&
+							'active'} left-0 top-4 sm:left-auto sm:right-0 w-44 sm:w-80 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
 						role="menu"
 						aria-orientation="vertical"
 						aria-labelledby="user-menu-button"
-						tabindex="-1"
+						bind:this={profileMenu}
 					>
-						<!-- Active: "bg-gray-100", Not Active: "" -->
-						<a
-							href="/"
-							class="block px-4 py-2 text-sm text-gray-700"
-							role="menuitem"
-							tabindex="-1"
-							id="user-menu-item-0">Your Profile</a
-						>
-						<a
-							href="/"
-							class="block px-4 py-2 text-sm text-gray-700"
-							role="menuitem"
-							tabindex="-1"
-							id="user-menu-item-1">Settings</a
-						>
-						<a
-							href="/"
-							class="block px-4 py-2 text-sm text-gray-700"
-							role="menuitem"
-							tabindex="-1"
-							id="user-menu-item-2">Sign out</a
-						>
+						{#each profileNavLinks as { label, href }}
+							<a
+								{href}
+								sveltekit:prefetch
+								class="bg-gray-100 hover:bg-gray-300 block px-6 py-4 text-base font-medium text-gray-700 {href ===
+									currentPage && 'font-bold'}"
+								role="menuitem"
+								id="user-menu-item-0"
+								on:click={toggleProfileNav}>{label}</a
+							>
+						{/each}
 					</div>
 				</div>
 			</div>
@@ -147,30 +189,10 @@
 					class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
 					aria-controls="mobile-menu"
 					aria-expanded="false"
+					on:click={toggleMobileNav}
 				>
 					<span class="sr-only">Open main menu</span>
-					<!--
-            Icon when menu is closed.
 
-            Heroicon name: outline/menu
-
-            Menu open: "hidden", Menu closed: "block"
-          -->
-					<svg
-						class="block h-6 w-6"
-						xmlns="http://www.w3.org/2000/svg"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke="currentColor"
-						aria-hidden="true"
-					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M4 6h16M4 12h16M4 18h16"
-						/>
-					</svg>
 					<!--
             Icon when menu is open.
 
@@ -179,7 +201,7 @@
             Menu open: "block", Menu closed: "hidden"
           -->
 					<svg
-						class="hidden h-6 w-6"
+						class="{mobileNavIsOpen ? 'block' : 'hidden'} h-6 w-6"
 						xmlns="http://www.w3.org/2000/svg"
 						fill="none"
 						viewBox="0 0 24 24"
@@ -193,38 +215,63 @@
 							d="M6 18L18 6M6 6l12 12"
 						/>
 					</svg>
+
+					<!--
+            Icon when menu is closed.
+
+            Heroicon name: outline/menu
+
+            Menu open: "hidden", Menu closed: "block"
+          -->
+					<svg
+						class="{mobileNavIsOpen ? 'hidden' : 'block'} h-6 w-6"
+						xmlns="http://www.w3.org/2000/svg"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
+						aria-hidden="true"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M4 6h16M4 12h16M4 18h16"
+						/>
+					</svg>
 				</button>
 			</div>
 		</div>
 	</div>
 
-	<!-- Mobile menu, show/hide based on menu state. -->
-	<div class="sm:hidden" id="mobile-menu">
-		<div class="px-2 pt-2 pb-3 space-y-1 text-center">
-			<!-- Current: "bg-gray-900 text-white", Default: "text-gray-300 hover:bg-gray-700 hover:text-white" -->
-			<a
-				href="/"
-				class="bg-gray-900 text-white block px-3 py-2 rounded-md text-base font-medium"
-				aria-current="page">Dashboard</a
-			>
-
-			<a
-				href="/"
-				class="text-gray-300 hover:bg-gray-700 hover:text-white block px-3 py-2 rounded-md text-base font-medium"
-				>Team</a
-			>
-
-			<a
-				href="/"
-				class="text-gray-300 hover:bg-gray-700 hover:text-white block px-3 py-2 rounded-md text-base font-medium"
-				>Projects</a
-			>
-
-			<a
-				href="/"
-				class="text-gray-300 hover:bg-gray-700 hover:text-white block px-3 py-2 rounded-md text-base font-medium"
-				>Calendar</a
-			>
+	<!-- Mobile Menu -->
+	<div class="sm:hidden dropdown {mobileNavIsOpen && 'active'} bg-gray-800" id="mobile-menu">
+		<div class="px-2 pt-2 h-screen w-screen text-center">
+			{#each mainNavLinks as { label, href }}
+				<a
+					{href}
+					sveltekit:prefetch
+					on:click={toggleMobileNav}
+					class="block px-3 py-4 rounded-md text-base font-medium {currentPage === href
+						? 'bg-gray-900 text-white'
+						: 'text-gray-300'}"
+					aria-current={currentPage === href ? 'page' : false}
+				>
+					{label}
+				</a>
+			{/each}
 		</div>
 	</div>
 </nav>
+
+<style>
+	.dropdown {
+		position: absolute;
+		height: auto;
+		max-height: 0;
+		transition: max-height 0.25s ease-in-out;
+		overflow: hidden;
+	}
+	.dropdown.active {
+		max-height: 100vh;
+	}
+</style>
